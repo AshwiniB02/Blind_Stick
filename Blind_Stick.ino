@@ -3,6 +3,8 @@ const int top_echo = 14;     // D5
 const int bottom_trig = 12;  // D6
 const int bottom_echo = 13;  // D7
 
+const int buzzer = 4;        // D2
+
 void setup() {
   Serial.begin(9600);
 
@@ -48,13 +50,50 @@ float readBottomSensor() {
   return distance;
 }
 
+void alarm(int num) {
+  for(int i=0;i<num;i++)
+  {
+  tone(buzzer,200,10);
+  delay(100);
+  }
+}
+
+int getnum(float top,float bottom)
+{
+  if(top<10)
+  {
+    return 4;
+  }
+  if(top<20)
+  {
+    return 3;
+  }
+  if(top<30)
+  {
+    return 2;
+  }
+  if(top<40)
+  {
+    return 1;
+  }
+  return 0;
+}
+
 void loop() {
-  float top=readTopSensor();
-  delay(200);
-  float bottom=readBottomSensor();
-  delay(200);
-  Serial.print("Distance: top ");
+  float top = readTopSensor();
+  delay(10);
+  float bottom = readBottomSensor();
+  delay(10);
+  /*Serial.print("Distance: top ");
   Serial.print(top);
   Serial.print(" Distance : bottom ");
-  Serial.println(bottom);
+  Serial.println(bottom);*/
+  
+  int n=getnum(top,bottom);
+  //Serial.println(n);
+  if(n > 0)
+  {
+    alarm(n);
+  }
+  delay(1000);
 }
