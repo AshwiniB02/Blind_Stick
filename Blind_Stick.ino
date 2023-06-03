@@ -8,6 +8,8 @@ const int rftx_pin = 1;      // Tx (rftx pin->data pin of transmitter)
 
 const int buzzer = 4;  // D2
 
+const int button = 5;  //D1
+const int LED = 3;     //RX
 char data[] = "ALERT";
 
 Gyver433_TX<rftx_pin> tx;
@@ -20,6 +22,8 @@ void setup() {
   pinMode(bottom_trig, OUTPUT);
   pinMode(bottom_echo, INPUT);
   pinMode(rftx_pin, OUTPUT);
+  pinMode(LED, OUTPUT);
+  pinMode(button, INPUT);
 }
 
 float readTopSensor() {
@@ -60,7 +64,7 @@ float readBottomSensor() {
 
 void alarm(int num) {
   for (int i = 0; i < num; i++) {
-    tone(buzzer, 200, 10);
+    tone(buzzer, 1200, 30);
     delay(100);
   }
 }
@@ -81,6 +85,16 @@ int getnum(float top, float bottom) {
   return 0;
 }
 
+void emergency() {
+  if (digitalRead(button)) {
+    digitalWrite(LED, HIGH);
+    tx.sendData(data);
+    delay(500);
+  } else {
+    digitalWrite(LED, LOW);
+  }
+}
+
 void loop() {
   float top = readTopSensor();
   delay(10);
@@ -95,7 +109,12 @@ void loop() {
   //Serial.println(n);
   if (n > 0) {
     alarm(n);
-    tx.sendData(data);
+    // split big delay into small
+    // to enable quick response on button
+    for (int i = 0; i < 10; i++) {
+      emergency();
+      delay(100);
+    }
   }
-  delay(1000);
+  emergency();
 }
