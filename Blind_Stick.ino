@@ -1,9 +1,16 @@
+#include <Gyver433.h>
+
 const int top_trig = 2;      // D4
 const int top_echo = 14;     // D5
 const int bottom_trig = 12;  // D6
 const int bottom_echo = 13;  // D7
+const int rftx_pin = 1;      // Tx (rftx pin->data pin of transmitter)
 
 const int buzzer = 4;  // D2
+
+char data[] = "ALERT";
+
+Gyver433_TX<rftx_pin> tx;
 
 void setup() {
   Serial.begin(9600);
@@ -12,6 +19,7 @@ void setup() {
   pinMode(top_echo, INPUT);
   pinMode(bottom_trig, OUTPUT);
   pinMode(bottom_echo, INPUT);
+  pinMode(rftx_pin, OUTPUT);
 }
 
 float readTopSensor() {
@@ -87,6 +95,7 @@ void loop() {
   //Serial.println(n);
   if (n > 0) {
     alarm(n);
+    tx.sendData(data);
   }
   delay(1000);
 }
