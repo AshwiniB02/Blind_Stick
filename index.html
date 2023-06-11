@@ -1,0 +1,120 @@
+<!-- <!DOCTYPE html>
+<html>
+<head>
+  <title>Send Location Example</title>
+  <script>
+    var socket;
+
+    function initWebSocket() {
+      socket = new WebSocket("ws://192.168.43.61:8080");
+
+      socket.onopen = function() {
+        console.log("WebSocket connection established.");
+      };
+
+      socket.onclose = function(event) {
+        console.log("WebSocket connection closed: " + event.code);
+      };
+
+      socket.onerror = function(error) {
+        console.log("WebSocket error: " + error);
+      };
+    }
+
+    function sendLocation() {
+      console.log("send location");
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var latitude = position.coords.latitude;
+          var longitude = position.coords.longitude;
+
+          var locationData = {
+            latitude: latitude,
+            longitude: longitude
+          };
+          console.log("location: " + latitude + ", " + longitude);
+          socket.send(JSON.stringify(locationData));
+        }, function(error) {
+          console.log("Error retrieving location: " + error.message);
+        });
+      } else {
+        console.log("Geolocation is not supported by this browser.");
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>Send Location Example</h1>
+  <button onclick="initWebSocket()">Connect WebSocket</button>
+  <button onclick="sendLocation()">Send Location</button>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get Location Example</title>
+    <script>
+        var socket;
+
+        function initWebSocket() {
+            var ipAddress = document.getElementById("ipAddress").value;
+            console.log(ipAddress);
+            socket = new WebSocket("ws://"+ipAddress+":8080");
+
+            socket.onopen = function() {
+                console.log("WebSocket connection established.");
+            };
+
+        socket.onclose = function(event) {
+            console.log("WebSocket connection closed: " + event.code);
+        };
+
+        socket.onerror = function(error) {
+            console.log("WebSocket error: " + error);
+        };
+
+        socket.onmessage = function(e) {  
+                    console.log("[socket] " + e.data);
+                    // document.getElementById("mrdiy_value").innerHTML = e.data;
+                    getLocation();
+                };
+    }
+
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition);
+      } else {
+        alert("Geolocation is not supported by this browser.");
+      }
+    }
+
+    function showPosition(position) {
+      var latitude = position.coords.latitude;
+      var longitude = position.coords.longitude;
+
+      document.getElementById("latitude").textContent = "Latitude: " + latitude;
+      document.getElementById("longitude").textContent = "Longitude: " + longitude;
+
+      var locationData = {
+            latitude: latitude,
+            longitude: longitude
+          };
+          console.log("location: " + latitude + ", " + longitude);
+          socket.send(JSON.stringify(locationData));
+    }
+    
+  </script>
+</head>
+<body>
+  <h1>Blind Stick</h1>
+  <label for="ipAddress">Enter IP Address:</label>
+  <input type="text" id="ipAddress" name="ipAddress">
+  <button onclick="initWebSocket()">Connect WebSocket</button>
+  <!-- <button onclick="getLocation()">Get Location</button> -->
+  <p id="latitude"></p>
+  <p id="longitude"></p>
+</body>
+</html>
+

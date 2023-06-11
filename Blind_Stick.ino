@@ -1,10 +1,17 @@
 #include <Gyver433.h>
+#include <ESP8266WiFi.h>
+#include <WebSocketsServer.h>
+#include <ESP8266WebServer.h>
+
+#include "webpage.h"
+
+#define G433_SLOW
 
 const int top_trig = 2;      // D4
 const int top_echo = 14;     // D5
 const int bottom_trig = 12;  // D6
 const int bottom_echo = 13;  // D7
-const int rftx_pin = 1;      // Tx (rftx pin->data pin of transmitter)
+const int rftx_pin = 15;     // D8 (rftx pin->data pin of transmitter)
 
 const int buzzer = 4;  // D2
 
@@ -12,18 +19,78 @@ const int button = 5;  //D1
 const int LED = 3;     //RX
 char data[] = "ALERT";
 
+const char* ssid = "redmi 10";
+const char* password = "ashu12345";
+const int webSocketPort = 8080;
+
+WebSocketsServer webSocket = WebSocketsServer(webSocketPort);
+ESP8266WebServer server(80);
+
 Gyver433_TX<rftx_pin> tx;
 
+
+// WebSocket event handler
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
+  Serial.println("event");
+  if (type == WStype_TEXT) {
+    Serial.print("Received data: ");
+    Serial.println((char*)payload);
+
+    // send it to receiver
+    tx.sendData(payload);
+
+    // Process the received data here
+    // You can parse the JSON and extract the latitude and longitude values
+
+    // For example, assuming the payload is in the format {"latitude": 123, "longitude": 456}
+    // You can use a JSON library like ArduinoJson to parse the payload
+    // ArduinoJson library: https://arduinojson.org/
+    // Include the library and add the necessary parsing code
+
+    // JSON parsing example:
+    // DynamicJsonDocument doc(256);
+    // deserializeJson(doc, (char*)payload);
+    // int latitude = doc["latitude"];
+    // int longitude = doc["longitude"];
+
+    // Do something with the latitude and longitude values
+  }
+}
+
+// Connect to Wi-Fi
+void connectToWiFi() {
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to Wi-Fi");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.print("Connected to Wi-Fi. IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void handleRoot() {
+  server.send(200, "text/html", html);
+}
+
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   pinMode(top_trig, OUTPUT);
   pinMode(top_echo, INPUT);
   pinMode(bottom_trig, OUTPUT);
   pinMode(bottom_echo, INPUT);
-  pinMode(rftx_pin, OUTPUT);
   pinMode(LED, OUTPUT);
   pinMode(button, INPUT);
+
+  connectToWiFi();
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
+  server.on("/", handleRoot);
+  server.begin();
 }
 
 float readTopSensor() {
@@ -64,7 +131,7 @@ float readBottomSensor() {
 
 void alarm(int num) {
   for (int i = 0; i < num; i++) {
-    tone(buzzer, 1200, 30);
+    // tone(buzzer, 1200, 30);
     delay(100);
   }
 }
@@ -86,9 +153,14 @@ int getnum(float top, float bottom) {
 }
 
 void emergency() {
+  // tx.sendData(data);
+  webSocket.loop();
+  server.handleClient();
+
   if (digitalRead(button)) {
     digitalWrite(LED, HIGH);
     tx.sendData(data);
+    webSocket.broadcastTXT("Alert");
     delay(500);
   } else {
     digitalWrite(LED, LOW);
@@ -106,7 +178,7 @@ void loop() {
   Serial.println(bottom);*/
 
   int n = getnum(top, bottom);
-  //Serial.println(n);
+  // Serial.println(n);
   if (n > 0) {
     alarm(n);
     // split big delay into small
