@@ -1,11 +1,12 @@
-#include <Gyver433.h>
-#include <ESP8266WiFi.h>
+#include <RH_ASK.h>
+#ifdef RH_HAVE_HARDWARE_SPI
+#include <SPI.h>  // Not actually used but needed to compile
+#endif #include < ESP8266WiFi.h>
 #include <WebSocketsServer.h>
 #include <ESP8266WebServer.h>
+#include <ArduinoJson.h>
 
 #include "webpage.h"
-
-#define G433_SLOW
 
 const int top_trig = 2;      // D4
 const int top_echo = 14;     // D5
@@ -26,8 +27,8 @@ const int webSocketPort = 8080;
 WebSocketsServer webSocket = WebSocketsServer(webSocketPort);
 ESP8266WebServer server(80);
 
-Gyver433_TX<rftx_pin> tx;
-
+// RH_ASK driver;
+RH_ASK driver(2000, 16, 15, 0);  // ESP8266 or ESP32: do not use pin 11 or 2
 
 // WebSocket event handler
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
@@ -37,7 +38,9 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
     Serial.println((char*)payload);
 
     // send it to receiver
-    tx.sendData(payload);
+    // char loc[] = "loc";
+    // driver.send((uint8_t *)loc, 3);
+    // driver.waitPacketSent();
 
     // Process the received data here
     // You can parse the JSON and extract the latitude and longitude values
@@ -48,10 +51,16 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
     // Include the library and add the necessary parsing code
 
     // JSON parsing example:
-    // DynamicJsonDocument doc(256);
-    // deserializeJson(doc, (char*)payload);
-    // int latitude = doc["latitude"];
-    // int longitude = doc["longitude"];
+    DynamicJsonDocument doc(256);
+    deserializeJson(doc, payload);
+    float latitude = doc["latitude"];
+    float longitude = doc["longitude"];
+    Serial.println(latitude);
+    driver.send((uint8_t*)&latitude, 4);
+    driver.waitPacketSent();
+    Serial.println(longitude);
+    driver.send((uint8_t*)&longitude, 4);
+    driver.waitPacketSent();
 
     // Do something with the latitude and longitude values
   }
@@ -85,6 +94,11 @@ void setup() {
   pinMode(bottom_echo, INPUT);
   pinMode(LED, OUTPUT);
   pinMode(button, INPUT);
+
+  if (!driver.init())
+#ifdef RH_HAVE_SERIAL
+    Serial.println("init failed");
+#endif
 
   connectToWiFi();
   webSocket.begin();
@@ -131,7 +145,7 @@ float readBottomSensor() {
 
 void alarm(int num) {
   for (int i = 0; i < num; i++) {
-    // tone(buzzer, 1200, 30);
+    tone(buzzer, 1200, 30);
     delay(100);
   }
 }
@@ -153,13 +167,13 @@ int getnum(float top, float bottom) {
 }
 
 void emergency() {
-  // tx.sendData(data);
   webSocket.loop();
   server.handleClient();
 
   if (digitalRead(button)) {
     digitalWrite(LED, HIGH);
-    tx.sendData(data);
+    driver.send((uint8_t*)data, strlen(data));
+    driver.waitPacketSent();
     webSocket.broadcastTXT("Alert");
     delay(500);
   } else {
