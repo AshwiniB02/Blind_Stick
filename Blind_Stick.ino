@@ -18,11 +18,12 @@ const int buzzer = 4;  // D2
 
 const int button = 5;  //D1
 const int LED = 3;     //RX
-char data[] = "ALERT";
 
-const char* ssid = "redmi 10";
-const char* password = "ashu12345";
+const char* ssid = "Arch-98";
+const char* password = "archu12345";
 const int webSocketPort = 8080;
+
+String my_ip;
 
 WebSocketsServer webSocket = WebSocketsServer(webSocketPort);
 ESP8266WebServer server(80);
@@ -55,12 +56,16 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length)
     deserializeJson(doc, payload);
     float latitude = doc["latitude"];
     float longitude = doc["longitude"];
-    Serial.println(latitude);
+
+    // send to receiver
     driver.send((uint8_t*)&latitude, 4);
     driver.waitPacketSent();
-    Serial.println(longitude);
     driver.send((uint8_t*)&longitude, 4);
     driver.waitPacketSent();
+
+    // debug
+    Serial.println(latitude, 8);
+    Serial.println(longitude, 8);
 
     // Do something with the latitude and longitude values
   }
@@ -76,9 +81,16 @@ void connectToWiFi() {
     Serial.print(".");
   }
 
+  my_ip = WiFi.localIP().toString();
   Serial.println("");
   Serial.print("Connected to Wi-Fi. IP address: ");
-  Serial.println(WiFi.localIP());
+  Serial.println(my_ip);
+}
+
+void send_IP() {
+  // send it to receiver
+  driver.send((uint8_t*)my_ip.substring(7).c_str(), my_ip.substring(7).length());
+  driver.waitPacketSent();
 }
 
 void handleRoot() {
@@ -101,6 +113,9 @@ void setup() {
 #endif
 
   connectToWiFi();
+  delay(100);
+  send_IP();
+  delay(100);
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
   server.on("/", handleRoot);
@@ -172,7 +187,8 @@ void emergency() {
 
   if (digitalRead(button)) {
     digitalWrite(LED, HIGH);
-    driver.send((uint8_t*)data, strlen(data));
+    uint8_t alert[6] = "ALERT";
+    driver.send((uint8_t*)alert, 5);
     driver.waitPacketSent();
     webSocket.broadcastTXT("Alert");
     delay(500);
