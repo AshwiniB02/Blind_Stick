@@ -19,8 +19,8 @@ const int buzzer = 4;  // D2
 const int button = 5;  //D1
 const int LED = 3;     //RX
 
-const char* ssid = "Arch-98";
-const char* password = "archu12345";
+const char* ssid = "pooja 2";
+const char* password = "pooja12345";
 const int webSocketPort = 8080;
 
 String my_ip;
